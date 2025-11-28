@@ -1,0 +1,1513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Chunky Day Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  html, body {
+    height: 100%;
+    margin: 0;
+    font-family: "Baloo 2", system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+    background: #C9F2F0; /* light, in-family with app */
+    color: #064e3b;
+  }
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 8px;
+    box-sizing: border-box;
+  }
+  .app {
+    width: min(660px, 100%);
+    height: min(860px, 100%);
+    background: #F3FCF8;
+    border-radius: 24px;
+    box-shadow: 0 22px 50px rgba(15,23,42,0.32);
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-sizing: border-box;
+    color: #022c22;
+  }
+  .header {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .date-nav-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+  }
+  .date-nav-left,
+  .date-nav-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .today-btn {
+    border: none;
+    background: transparent;
+    padding: 0;
+    font-size: 12px;
+    cursor: pointer;
+    color: inherit;
+  }
+  .today-btn:active {
+    transform: translateY(1px);
+  }
+  .date-title {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  .date-main {
+    font-size: 32px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+  }
+  .date-sub {
+    font-size: 12px;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-weight: 500;
+  }
+  .date-sub-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .date-hours {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+  }
+  .nav-btn {
+    background: #22C5A5;
+    border: none;
+    border-radius: 999px;
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    cursor: pointer;
+    color: #f9fafb;
+    box-shadow: 0 4px 10px rgba(15,23,42,0.18);
+    transition: transform 0.16s ease-out, box-shadow 0.16s ease-out, background 0.16s ease-out;
+  }
+  .nav-btn:active {
+    transform: translateY(1px) scale(0.97);
+    box-shadow: 0 2px 6px rgba(15,23,42,0.22);
+  }
+  .nav-btn:hover {
+    transform: translateY(-1px) scale(1.03);
+    box-shadow: 0 6px 14px rgba(15,23,42,0.26);
+  }
+  .controls {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    font-size: 12px;
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+  .controls-hint {
+    font-size: 11px;
+    color: #0f172a;
+    opacity: 0.7;
+  }
+  .pill input[type="time"]::-webkit-calendar-picker-indicator {
+    display: none;
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: #22C5A5;
+    color: #ECFEFF;
+    box-shadow: 0 3px 8px rgba(15,23,42,0.08);
+  }
+  .pill label {
+    font-size: 11px;
+    color: #ECFEFF;
+    opacity: 0.85;
+  }
+  .pill input[type="time"] {
+    border: none;
+    background: transparent;
+    font-size: 12px;
+    outline: none;
+    color: #ECFEFF;
+  }
+
+  .timeline-wrapper {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .timeline-header {
+    display: none;
+  }
+  .timeline-container {
+    flex: 1;
+    min-height: 0;
+    border-radius: 16px;
+    background: #8BE1D1;
+    box-shadow: inset 0 0 0 1px rgba(148,163,184,0.25);
+    position: relative;
+    overflow: hidden;
+    padding: 14px 0;
+    box-sizing: border-box;
+  }
+  .timeline-grid {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+  .hour-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(148,163,184,0.06); /* almost invisible */
+    pointer-events: none;
+  }
+  .hour-label {
+    position: absolute;
+    left: 6px;
+    transform: translateY(-50%);
+    padding: 0 4px;
+    border-radius: 4px;
+    background: transparent;
+    font-size: 11px;
+    color: #9ca3af;
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+  }
+
+  .now-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #ef4444;
+    pointer-events: none;
+  }
+
+  .block {
+    position: absolute;
+    left: 60px;               /* minimal left gutter */
+    right: 10px;
+    border-radius: 22px;
+    padding: 4px 16px 8px;
+    min-height: 22px;
+    box-sizing: border-box;
+    cursor: grab;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: top 0.22s ease-in-out, height 0.22s ease-in-out, transform 0.18s ease-out, box-shadow 0.18s ease-out;
+    margin-top: 1px;           /* hairline gaps between blocks */
+    margin-bottom: 1px;
+    border: 1px solid rgba(255,255,255,0.5);
+    z-index: 1;
+    box-shadow: 0 10px 24px rgba(15,23,42,0.22);
+  }
+  .block:hover {
+    transform: translateY(-1px) scale(1.005);
+    box-shadow: 0 12px 28px rgba(15,23,42,0.26);
+  }
+  .block.block-no-shadow,
+  .block.block-no-shadow:hover {
+    box-shadow: none;
+  }
+  .block:active {
+    cursor: grabbing;
+  }
+  .block.dragging {
+    transition: none;
+    transform: translateY(-2px) scale(1.02);
+    z-index: 2;
+    box-shadow: 0 16px 34px rgba(15,23,42,0.32);
+  }
+
+  .block.editing,
+  .block.editing * {
+    cursor: text !important;
+  }
+
+  @keyframes block-shadow-collapse {
+    0% {
+      box-shadow: 0 10px 24px rgba(15,23,42,0.22);
+    }
+    50% {
+      box-shadow: 0 6px 16px rgba(15,23,42,0.26);
+    }
+    100% {
+      box-shadow: 0 0 0 rgba(15,23,42,0);
+    }
+  }
+  @keyframes block-drop-bounce {
+    0% {
+      transform: translateY(0) scale(1);
+    }
+    35% {
+      /* light compression on impact */
+      transform: translateY(2px) scale(0.99);
+    }
+    70% {
+      /* tiny rebound up */
+      transform: translateY(-1px) scale(1.008);
+    }
+    100% {
+      /* settle flat */
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .block-dropped {
+    animation: block-drop-bounce 0.28s ease-out;
+  }
+
+  .block-just-dropped:hover {
+    transform: none;
+  }
+
+  .app.drag-active .block,
+  .app.drag-active .block * {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+  }
+
+  .block-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;   /* vertical center */
+    justify-content: center; /* center the title block horizontally */
+    padding-left: 0;         /* times are absolutely positioned, no need to pad */
+    box-sizing: border-box;
+  }
+  .block-title,
+  .block-times-left-main,
+  .block-times-left-range {
+    transition: font-size 0.18s ease-out, padding 0.18s ease-out, line-height 0.18s ease-out;
+  }
+  .block-title {
+    font-size: 24px; /* base; will be overridden dynamically */
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    line-height: 1.1;
+    outline: none;
+    border: none;
+    background: transparent;
+    padding: 0 36px;      /* symmetric horizontal padding so it has room left/right */
+    margin: 0;
+    word-break: break-word;
+    text-align: left;     /* default for LTR; RTL handled via dir selector + JS */
+    display: inline-block; /* shrink-to-fit so multi-line block is centered as a unit */
+  }
+  .block-title[dir="rtl"] {
+    font-family: "Rubik", "Baloo 2", system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  }
+  /* Adaptive size classes for short blocks */
+  .block-compact .block-title {
+    padding: 0 28px;
+  }
+  .block-compact .block-times-left-main {
+    font-size: 11px;
+  }
+  .block-compact .block-times-left-range {
+    font-size: 10px;
+  }
+  .block-tiny .block-inner {
+    align-items: center;
+    justify-content: center;
+  }
+  .block-tiny .block-times-left {
+    display: none;
+  }
+  .block-tiny .block-title {
+    padding: 0 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block;
+  }
+  .block-tiny .resize-handle-top {
+  display: none;
+}
+  .block-title[contenteditable]:empty:before {
+    content: "NEW BLOCK";
+    opacity: 0.5;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .block-times-left {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    opacity: 0.85;
+    align-items: flex-start;
+  }
+  .block-times-left-main {
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .block-times-left-range {
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .block-times-left-start,
+  .block-times-left-end {
+    line-height: 1.1;
+  }
+
+
+  .block-delete {
+    position: absolute;
+    right: 6px;
+    top: 6px;
+    border: none;
+    background: rgba(15,23,42,0.25);
+    font-size: 16px;
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #f9fafb;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease-out;
+  }
+  .block.editing .block-delete {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+.resize-handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(15,23,42,0.16);
+  cursor: ns-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 2px rgba(15,23,42,0.18);
+}
+
+.resize-handle-top {
+  top: 10px;
+  right: 14px;
+  left: auto;
+  transform: none;
+}
+
+.resize-handle-bottom {
+  bottom: 10px;
+  right: 14px;
+  left: auto;
+  transform: none;
+}
+.resize-handle::before,
+.resize-handle::after {
+  content: "";
+  width: 60%;
+  height: 1.5px;
+  border-radius: 999px;
+  background: rgba(248,250,252,0.85);
+  position: absolute;
+}
+.resize-handle::before {
+  top: 4px;
+  opacity: 0.8;
+}
+.resize-handle::after {
+  top: 8px;
+  opacity: 0.6;
+}
+
+
+  .footer {
+    font-size: 11px;
+    color: #64748b;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 500;
+    opacity: 0.85;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="date-nav-row">
+      <div class="date-nav-left">
+        <button class="nav-btn" id="prevDayBtn">&#x25C0;</button>
+      </div>
+      <div class="date-title">
+        <div class="date-main" id="dateMain"></div>
+        <div class="date-sub-row">
+          <div class="date-sub" id="dateSub"></div>
+          <div class="date-hours" id="summaryInfo"></div>
+        </div>
+      </div>
+      <div class="date-nav-right">
+        <button class="nav-btn" id="nextDayBtn">&#x25B6;</button>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="today-btn pill" id="todayBtn">Today</button>
+      <div class="pill">
+        <input type="time" id="startTime" step="60">
+        <span>-</span>
+        <input type="time" id="endTime" step="60">
+      </div>
+    </div>
+  </div>
+
+  <div class="timeline-wrapper">
+    <div class="timeline-header"></div>
+    <div class="timeline-container" id="timelineContainer">
+      <div class="timeline-grid" id="timelineGrid"></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>Each day is saved automatically.</span>
+    <span id="footerInfo"></span>
+  </div>
+</div>
+
+<script>
+
+
+(
+function() {
+  const SLOT_MINUTES = 15;
+
+  // Coolors palette with text colors tuned per block color
+  const palette = [
+    { bg: "#5FAD56", text: "#1D4D21" },
+    { bg: "#F2C14E", text: "#7A4A00" },
+    { bg: "#F78154", text: "#7F2D14" },
+    { bg: "#4D9078", text: "#143C30" },
+    { bg: "#B4436C", text: "#4B1025" }
+  ];
+
+  let currentDate = stripTime(new Date());
+  let schedules = loadAllSchedules();
+  let dragState = null;
+  let hoveredBlockId = null;
+
+  // Undo / copy-paste state
+  let undoStack = [];
+  let copiedBlockTemplate = null;
+  function cloneSchedulesState() {
+    try {
+      return JSON.parse(JSON.stringify(schedules));
+    } catch {
+      return {};
+    }
+  }
+
+  function pushUndoState() {
+    const snapshot = {
+      schedules: cloneSchedulesState(),
+      currentDateKey: formatDateKey(currentDate)
+    };
+    undoStack.push(snapshot);
+    if (undoStack.length > 5) {
+      undoStack.shift();
+    }
+  }
+
+  function undoLastAction() {
+    if (!undoStack.length) return;
+    const snapshot = undoStack.pop();
+    schedules = snapshot.schedules || {};
+    try {
+      currentDate = stripTime(new Date(snapshot.currentDateKey));
+    } catch {
+      // fallback: keep currentDate if parsing fails
+    }
+    saveAllSchedules();
+    render();
+  }
+
+  function copyHoveredBlock() {
+    if (!hoveredBlockId) return;
+    const schedule = getSchedule(currentDate);
+    const block = schedule.blocks.find(b => b.id === hoveredBlockId);
+    if (!block) return;
+    copiedBlockTemplate = {
+      title: block.title,
+      colorIndex: block.colorIndex,
+      startMinutes: block.startMinutes,
+      durationMinutes: block.durationMinutes
+    };
+  }
+
+  function pasteCopiedBlock() {
+    if (!copiedBlockTemplate) return;
+    const schedule = getSchedule(currentDate);
+    const { activeStart, activeEnd } = schedule;
+    let start = copiedBlockTemplate.startMinutes;
+    const duration = copiedBlockTemplate.durationMinutes;
+
+    // Clamp start to active day
+    if (start < activeStart) start = activeStart;
+    if (start + duration > activeEnd) {
+      start = Math.max(activeStart, activeEnd - duration);
+    }
+
+    pushUndoState();
+
+    const block = {
+      id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
+      title: copiedBlockTemplate.title,
+      colorIndex: copiedBlockTemplate.colorIndex,
+      startMinutes: start,
+      durationMinutes: Math.min(duration, activeEnd - start)
+    };
+
+    schedule.blocks.push(block);
+    resolveOverlaps(schedule);
+    saveAllSchedules();
+    renderBlocks();
+    updateFooterInfo(schedule);
+  }
+
+  const dateMainEl = document.getElementById("dateMain");
+  const dateSubEl = document.getElementById("dateSub");
+  const startTimeEl = document.getElementById("startTime");
+  const endTimeEl = document.getElementById("endTime");
+  const todayBtn = document.getElementById("todayBtn");
+  const timelineGridEl = document.getElementById("timelineGrid");
+  const timelineContainerEl = document.getElementById("timelineContainer");
+  const summaryInfoEl = document.getElementById("summaryInfo");
+  const footerInfoEl = document.getElementById("footerInfo");
+  const appEl = document.querySelector(".app");
+
+  document.addEventListener("keydown", (e) => {
+    const target = e.target;
+    const isEditable =
+      target.isContentEditable ||
+      target.tagName === "INPUT" ||
+      target.tagName === "TEXTAREA" ||
+      target.tagName === "SELECT";
+
+    // Undo last action with Cmd+Z / Ctrl+Z (but let native undo work inside text fields)
+    if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === "z") {
+      if (isEditable) return;
+      e.preventDefault();
+      undoLastAction();
+      return;
+    }
+
+    // Copy hovered block with Cmd+C / Ctrl+C (outside text fields)
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "c") {
+      if (isEditable) return;
+      copyHoveredBlock();
+      return;
+    }
+
+    // Paste copied block with Cmd+V / Ctrl+V (outside text fields)
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "v") {
+      if (isEditable) return;
+      e.preventDefault();
+      pasteCopiedBlock();
+      return;
+    }
+
+    // Backspace-to-delete hovered block (outside text fields)
+    if (e.key !== "Backspace") return;
+    if (isEditable) return;
+    // Don't delete while dragging
+    if (dragState) return;
+    if (!hoveredBlockId) return;
+
+    e.preventDefault();
+    deleteBlock(hoveredBlockId);
+    hoveredBlockId = null;
+  });
+  function reflowWithAnchor(schedule, anchorId) {
+    const { activeStart, activeEnd } = schedule;
+    const blocks = schedule.blocks.slice().sort((a, b) => a.startMinutes - b.startMinutes);
+    const anchorIndex = blocks.findIndex(b => b.id === anchorId);
+    if (anchorIndex === -1) {
+      resolveOverlaps(schedule);
+      return;
+    }
+    const anchor = blocks[anchorIndex];
+
+    // Clamp anchor to active day
+    if (anchor.startMinutes < activeStart) {
+      anchor.startMinutes = activeStart;
+    }
+    let anchorEnd = anchor.startMinutes + anchor.durationMinutes;
+    if (anchorEnd > activeEnd) {
+      anchor.startMinutes = Math.max(activeStart, activeEnd - anchor.durationMinutes);
+      anchorEnd = anchor.startMinutes + anchor.durationMinutes;
+    }
+
+    // Forward pass: push blocks AFTER the anchor downwards
+    for (let i = anchorIndex + 1; i < blocks.length; i++) {
+      const prev = blocks[i - 1];
+      const cur = blocks[i];
+      const minStart = prev.startMinutes + prev.durationMinutes;
+      if (cur.startMinutes < minStart) {
+        cur.startMinutes = minStart;
+      }
+      if (cur.startMinutes + cur.durationMinutes > activeEnd) {
+        cur.durationMinutes = Math.max(SLOT_MINUTES, activeEnd - cur.startMinutes);
+      }
+    }
+
+    // Backward pass: push blocks BEFORE the anchor upwards
+    for (let i = anchorIndex - 1; i >= 0; i--) {
+      const next = blocks[i + 1];
+      const cur = blocks[i];
+      let maxEnd = next.startMinutes;
+      if (cur.startMinutes + cur.durationMinutes > maxEnd) {
+        cur.startMinutes = maxEnd - cur.durationMinutes;
+      }
+      if (cur.startMinutes < activeStart) {
+        cur.startMinutes = activeStart;
+        maxEnd = next.startMinutes;
+        if (cur.startMinutes + cur.durationMinutes > maxEnd) {
+          cur.durationMinutes = Math.max(SLOT_MINUTES, maxEnd - cur.startMinutes);
+        }
+      }
+    }
+
+    schedule.blocks = blocks;
+  }
+
+  // --- Helper: simulate reflow with anchor, without mutating the real schedule ---
+  function simulateReflowWithAnchor(schedule, anchorId) {
+    const { activeStart, activeEnd } = schedule;
+    const blocksSim = schedule.blocks.map(b => ({
+      id: b.id,
+      startMinutes: b.startMinutes,
+      durationMinutes: b.durationMinutes
+    })).sort((a, b) => a.startMinutes - b.startMinutes);
+
+    const anchorIndex = blocksSim.findIndex(b => b.id === anchorId);
+    if (anchorIndex === -1) {
+      return blocksSim;
+    }
+    const anchor = blocksSim[anchorIndex];
+
+    // Clamp anchor to active day
+    if (anchor.startMinutes < activeStart) {
+      anchor.startMinutes = activeStart;
+    }
+    let anchorEnd = anchor.startMinutes + anchor.durationMinutes;
+    if (anchorEnd > activeEnd) {
+      anchor.startMinutes = Math.max(activeStart, activeEnd - anchor.durationMinutes);
+      anchorEnd = anchor.startMinutes + anchor.durationMinutes;
+    }
+
+    // Forward pass: push blocks AFTER the anchor downwards
+    for (let i = anchorIndex + 1; i < blocksSim.length; i++) {
+      const prev = blocksSim[i - 1];
+      const cur = blocksSim[i];
+      const minStart = prev.startMinutes + prev.durationMinutes;
+      if (cur.startMinutes < minStart) {
+        cur.startMinutes = minStart;
+      }
+      if (cur.startMinutes + cur.durationMinutes > activeEnd) {
+        cur.durationMinutes = Math.max(SLOT_MINUTES, activeEnd - cur.startMinutes);
+      }
+    }
+
+    // Backward pass: push blocks BEFORE the anchor upwards
+    for (let i = anchorIndex - 1; i >= 0; i--) {
+      const next = blocksSim[i + 1];
+      const cur = blocksSim[i];
+      let maxEnd = next.startMinutes;
+      if (cur.startMinutes + cur.durationMinutes > maxEnd) {
+        cur.startMinutes = maxEnd - cur.durationMinutes;
+      }
+      if (cur.startMinutes < activeStart) {
+        cur.startMinutes = activeStart;
+        maxEnd = next.startMinutes;
+        if (cur.startMinutes + cur.durationMinutes > maxEnd) {
+          cur.durationMinutes = Math.max(SLOT_MINUTES, maxEnd - cur.startMinutes);
+        }
+      }
+    }
+
+    return blocksSim;
+  }
+
+  // --- Dynamic typography scaling per block, based only on its duration ---
+  function adjustTypographyForBlock(block, el) {
+    const MIN_TITLE = 14;   // px
+    const MAX_TITLE = 40;   // px
+    const MIN_TIME  = 9;    // px
+    const MAX_TIME  = 14;   // px
+
+    const MIN_MINUTES = 15;   // 15-minute block
+    const MAX_MINUTES = 240;  // 4-hour block (cap)
+
+    if (!el) return;
+
+    const titleEl = el.querySelector('.block-title');
+    const durMainEl = el.querySelector('.block-times-left-main');
+    const durRangeEl = el.querySelector('.block-times-left-range');
+    if (!titleEl) return;
+
+    const clampedDuration = Math.max(MIN_MINUTES, Math.min(MAX_MINUTES, block.durationMinutes));
+    let t = (clampedDuration - MIN_MINUTES) / (MAX_MINUTES - MIN_MINUTES); // 0..1
+    // Ease-out so sizes grow faster as duration increases (chunkier big blocks)
+    t = Math.pow(t, 0.7);
+    const titleSize = MIN_TITLE + (MAX_TITLE - MIN_TITLE) * t;
+    titleEl.style.fontSize = titleSize.toFixed(1) + 'px';
+
+    const timeSize = MIN_TIME + (MAX_TIME - MIN_TIME) * t;
+    if (durMainEl) durMainEl.style.fontSize = timeSize.toFixed(1) + 'px';
+    if (durRangeEl) durRangeEl.style.fontSize = (timeSize - 1).toFixed(1) + 'px';
+  }
+  // --- End dynamic typography scaling ---
+
+  document.getElementById("prevDayBtn").addEventListener("click", () => changeDay(-1));
+  document.getElementById("nextDayBtn").addEventListener("click", () => changeDay(1));
+  todayBtn.addEventListener("click", () => {
+    currentDate = stripTime(new Date());
+    render();
+  });
+
+  startTimeEl.addEventListener("change", onTimeRangeChange);
+  endTimeEl.addEventListener("change", onTimeRangeChange);
+
+  // double-click on empty timeline area to add a new block
+  timelineContainerEl.addEventListener("dblclick", (e) => {
+    if (e.button !== 0) return;
+    if (e.target.closest(".block")) return;
+    createBlockAtPosition(e.clientY);
+  });
+
+  function stripTime(date) {
+    const d = new Date(date);
+    d.setHours(0,0,0,0);
+    return d;
+  }
+
+  function formatDateKey(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth()+1).padStart(2,"0");
+    const d = String(date.getDate()).padStart(2,"0");
+    return `${y}-${m}-${d}`;
+  }
+
+  function formatTimeLabel(totalMinutes) {
+    const h = Math.floor(totalMinutes/60);
+    const m = totalMinutes % 60;
+    return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
+  }
+
+  function formatDurationLabel(minutes) {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    if (h && m) return `${h}h ${m}m`;
+    if (h) return `${h}h`;
+    return `${m}m`;
+  }
+
+  function dateDisplayPieces(date) {
+    const weekday = date.toLocaleDateString(undefined, { weekday: "long" });
+    const day = String(date.getDate()).padStart(2, "0");
+    const monthShort = date.toLocaleDateString(undefined, { month: "short" });
+    const year = date.getFullYear();
+    return {
+      main: weekday.toUpperCase(),
+      sub: `${day} ${monthShort.toUpperCase()} · ${year}`
+    };
+  }
+
+  function loadAllSchedules() {
+    try {
+      const raw = localStorage.getItem("chunky-day-planner-v5");
+      if (!raw) return {};
+      return JSON.parse(raw);
+    } catch {
+      return {};
+    }
+  }
+
+  function saveAllSchedules() {
+    localStorage.setItem("chunky-day-planner-v5", JSON.stringify(schedules));
+  }
+
+  function getSchedule(date) {
+    const key = formatDateKey(date);
+    if (!schedules[key]) {
+      schedules[key] = {
+        activeStart: 9*60,
+        activeEnd: 17*60,
+        blocks: []
+      };
+      saveAllSchedules();
+    }
+    return schedules[key];
+  }
+
+  function changeDay(deltaDays) {
+    currentDate = new Date(currentDate.getTime() + deltaDays*24*60*60*1000);
+    currentDate = stripTime(currentDate);
+    render();
+  }
+
+  function timeInputToMinutes(value) {
+    if (!value) return null;
+    const [hh, mm] = value.split(":").map(Number);
+    if (Number.isNaN(hh) || Number.isNaN(mm)) return null;
+    return hh*60 + mm;
+  }
+
+  function minutesToTimeInput(minutes) {
+    const h = Math.floor(minutes/60);
+    const m = minutes % 60;
+    return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
+  }
+
+  function snapToSlot(totalMinutes) {
+    return Math.round(totalMinutes / SLOT_MINUTES) * SLOT_MINUTES;
+  }
+
+  function snapDuration(mins) {
+    return Math.max(SLOT_MINUTES, Math.round(mins / SLOT_MINUTES) * SLOT_MINUTES);
+  }
+
+  function isRTL(text) {
+    return /[\u0590-\u05FF]/.test(text);
+  }
+
+  function onTimeRangeChange() {
+    const schedule = getSchedule(currentDate);
+    const startMinutes = timeInputToMinutes(startTimeEl.value) ?? schedule.activeStart;
+    const endMinutes = timeInputToMinutes(endTimeEl.value) ?? schedule.activeEnd;
+    if (endMinutes <= startMinutes) return;
+
+    pushUndoState();
+
+    schedule.activeStart = startMinutes;
+    schedule.activeEnd = endMinutes;
+    saveAllSchedules();
+    render();
+  }
+
+  function createBlockAtPosition(clientY) {
+    const schedule = getSchedule(currentDate);
+    const {activeStart, activeEnd} = schedule;
+    const totalMinutes = activeEnd - activeStart;
+    const rect = timelineGridEl.getBoundingClientRect();
+    const y = clientY - rect.top;
+    const ratio = Math.min(Math.max(y / rect.height, 0), 1);
+    let minutes = activeStart + ratio * totalMinutes;
+    let start = snapToSlot(minutes);
+    const defaultDuration = 60;
+
+    if (start + defaultDuration > activeEnd) {
+      start = Math.max(activeStart, activeEnd - defaultDuration);
+    }
+
+    const paletteIndex = schedule.blocks.length % palette.length;
+    const block = {
+      id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
+      title: "",
+      colorIndex: paletteIndex,
+      startMinutes: start,
+      durationMinutes: Math.min(defaultDuration, activeEnd - start)
+    };
+    pushUndoState();
+    schedule.blocks.push(block);
+    resolveOverlaps(schedule);
+    saveAllSchedules();
+    renderBlocks();
+    updateFooterInfo(schedule);
+
+    // automatically start editing the new block's title
+    const blockEl = timelineGridEl.querySelector(`.block[data-id="${block.id}"]`);
+    if (blockEl) {
+      const titleEl = blockEl.querySelector(".block-title");
+      if (titleEl) {
+        enterEditTitle(block, titleEl, blockEl);
+      }
+    }
+  }
+
+  function deleteBlock(id) {
+    const schedule = getSchedule(currentDate);
+    const idx = schedule.blocks.findIndex(b => b.id === id);
+    if (idx === -1) return;
+
+    pushUndoState();
+
+    schedule.blocks.splice(idx, 1);
+    saveAllSchedules();
+    renderBlocks();
+    updateFooterInfo(schedule);
+  }
+
+
+  function totalPlannedMinutes(schedule) {
+    return schedule.blocks.reduce((sum, b) => sum + b.durationMinutes, 0);
+  }
+
+  function updateFooterInfo(schedule) {
+    footerInfoEl.textContent = `${schedule.blocks.length} block${schedule.blocks.length === 1 ? "" : "s"} · ${Math.round(totalPlannedMinutes(schedule)/60*10)/10}h planned`;
+  }
+
+  function render() {
+    const schedule = getSchedule(currentDate);
+    const parts = dateDisplayPieces(currentDate);
+    dateMainEl.textContent = parts.main;
+    dateSubEl.textContent = parts.sub;
+    startTimeEl.value = minutesToTimeInput(schedule.activeStart);
+    endTimeEl.value = minutesToTimeInput(schedule.activeEnd);
+
+    const totalMinutesDay = schedule.activeEnd - schedule.activeStart;
+    const hours = Math.round(totalMinutesDay / 60 * 10) / 10;
+    summaryInfoEl.textContent = `· ${hours}h`;
+
+    updateFooterInfo(schedule);
+
+    renderTimeline();
+    renderBlocks();
+  }
+
+  function renderTimeline() {
+    const schedule = getSchedule(currentDate);
+    const {activeStart, activeEnd} = schedule;
+    const totalMinutes = activeEnd - activeStart;
+
+    timelineGridEl.innerHTML = "";
+
+    const firstHour = Math.ceil(activeStart / 60);
+    const lastHour = Math.floor(activeEnd / 60);
+
+    for (let h = firstHour; h <= lastHour; h++) {
+      const minutesFromTop = h*60 - activeStart;
+      const ratio = minutesFromTop / totalMinutes;
+      const topPercent = ratio * 100;
+
+      const line = document.createElement("div");
+      line.className = "hour-line";
+      line.style.top = `${topPercent}%`;
+
+      const label = document.createElement("div");
+      label.className = "hour-label";
+      label.textContent = `${String(h).padStart(2,"0")}:00`;
+      label.style.top = `${topPercent}%`;
+
+      timelineGridEl.appendChild(line);
+      timelineGridEl.appendChild(label);
+    }
+
+    // now-line
+    const today = stripTime(new Date());
+    const isToday = formatDateKey(today) === formatDateKey(currentDate);
+    if (isToday) {
+      const now = new Date();
+      const minsNow = now.getHours()*60 + now.getMinutes();
+      if (minsNow >= activeStart && minsNow <= activeEnd) {
+        const ratioNow = (minsNow - activeStart) / totalMinutes;
+        const topNow = ratioNow * 100;
+        const nowLine = document.createElement("div");
+        nowLine.className = "now-line";
+        nowLine.style.top = `${topNow}%`;
+        timelineGridEl.appendChild(nowLine);
+      }
+    }
+  }
+
+  function renderBlocks() {
+    const schedule = getSchedule(currentDate);
+    const {activeStart, activeEnd} = schedule;
+    const totalMinutes = activeEnd - activeStart;
+
+    Array.from(timelineGridEl.querySelectorAll(".block")).forEach(el => el.remove());
+
+    schedule.blocks.forEach(block => {
+      const colors = palette[block.colorIndex % palette.length];
+      const el = document.createElement("div");
+      el.className = "block";
+      el.dataset.id = block.id;
+      el.style.backgroundColor = colors.bg;
+      el.style.color = colors.text;
+
+      const topRatio = (block.startMinutes - activeStart) / totalMinutes;
+      const heightRatio = block.durationMinutes / totalMinutes;
+      el.style.top = `${topRatio * 100}%`;
+      el.style.height = `${Math.max(heightRatio * 100, (SLOT_MINUTES/totalMinutes)*100)}%`;
+
+      // classify by duration for adaptive text sizing
+      if (block.durationMinutes < 60) {
+        el.classList.add("block-short");
+        if (block.durationMinutes < 30) {
+          el.classList.add("block-tiny");
+        } else {
+          el.classList.add("block-compact");
+        }
+      }
+
+      const inner = document.createElement("div");
+      inner.className = "block-inner";
+
+      const timesLeft = document.createElement("div");
+      timesLeft.className = "block-times-left";
+      const mainDur = document.createElement("div");
+      mainDur.className = "block-times-left-main";
+      mainDur.textContent = formatDurationLabel(block.durationMinutes);
+      // --- new vertical range structure ---
+      const range = document.createElement("div");
+      range.className = "block-times-left-range";
+
+      const startLabel = document.createElement("div");
+      startLabel.className = "block-times-left-start";
+      startLabel.textContent = formatTimeLabel(block.startMinutes);
+
+      const endLabel = document.createElement("div");
+      endLabel.className = "block-times-left-end";
+      endLabel.textContent = formatTimeLabel(block.startMinutes + block.durationMinutes);
+
+      range.appendChild(startLabel);
+      range.appendChild(endLabel);
+
+      timesLeft.appendChild(mainDur);
+      timesLeft.appendChild(range);
+      // --- end new vertical range structure ---
+
+      const title = document.createElement("div");
+      title.className = "block-title";
+      title.textContent = block.title;
+      if (isRTL(block.title)) {
+        title.dir = "rtl";
+        title.style.textAlign = "right";
+      } else {
+        title.dir = "ltr";
+        title.style.textAlign = "left";
+      }
+
+      const delBtn = document.createElement("button");
+      delBtn.className = "block-delete";
+      delBtn.textContent = "×";
+      delBtn.addEventListener("mousedown", (e) => {
+        if (e.button !== 0) return;
+        e.stopPropagation();
+        deleteBlock(block.id);
+      });
+
+      const resizeBottom = document.createElement("div");
+      resizeBottom.className = "resize-handle resize-handle-bottom";
+      const resizeTop = document.createElement("div");
+      resizeTop.className = "resize-handle resize-handle-top";
+
+      inner.appendChild(timesLeft);
+      inner.appendChild(title);
+      inner.appendChild(delBtn);
+      el.appendChild(inner);
+      el.appendChild(resizeTop);
+      el.appendChild(resizeBottom);
+      timelineGridEl.appendChild(el);
+
+      // drag from anywhere except resize/delete
+      el.addEventListener("mousedown", (e) => {
+        if (e.button !== 0) return;
+        // Don't start drag when editing text or clicking inside the editable title
+        if (el.classList.contains("editing") || e.target.isContentEditable) return;
+        if (e.target === resizeBottom || e.target === resizeTop || e.target === delBtn) return;
+        if (e.detail > 1) return; // dblclick goes to edit
+        startDrag(e, block, "move");
+      });
+
+      // double-click to edit title
+      el.addEventListener("dblclick", (e) => {
+        if (e.button !== 0) return;
+        e.stopPropagation();
+        enterEditTitle(block, title, el);
+      });
+
+      // track which block is currently hovered, for Backspace-to-delete
+      el.addEventListener("mouseenter", () => {
+        hoveredBlockId = block.id;
+      });
+      el.addEventListener("mouseleave", () => {
+        if (hoveredBlockId === block.id) {
+          hoveredBlockId = null;
+        }
+      });
+
+      // resize bottom
+      resizeBottom.addEventListener("mousedown", (e) => {
+        if (e.button !== 0) return;
+        e.stopPropagation();
+        startDrag(e, block, "resize-bottom");
+      });
+      // resize top
+      resizeTop.addEventListener("mousedown", (e) => {
+        if (e.button !== 0) return;
+        e.stopPropagation();
+        startDrag(e, block, "resize-top");
+      });
+
+      // apply typography scaling for this block only
+      adjustTypographyForBlock(block, el);
+    });
+
+    // Ensure positions and shadow classes are normalized after initial render
+    updateBlockPositions(schedule);
+  }
+
+  function updateBlockPositions(schedule, skipShadow) {
+    const {activeStart, activeEnd} = schedule;
+    const totalMinutes = activeEnd - activeStart;
+
+    schedule.blocks.forEach(block => {
+      const el = timelineGridEl.querySelector(`.block[data-id="${block.id}"]`);
+      if (!el) return;
+
+      const topRatio = (block.startMinutes - activeStart) / totalMinutes;
+      const heightRatio = block.durationMinutes / totalMinutes;
+      el.style.top = `${topRatio * 100}%`;
+      el.style.height = `${Math.max(heightRatio * 100, (SLOT_MINUTES/totalMinutes)*100)}%`;
+
+      // Remove all sizing classes first
+      el.classList.remove("block-short", "block-compact", "block-tiny");
+      if (block.durationMinutes < 60) {
+        el.classList.add("block-short");
+        if (block.durationMinutes < 30) {
+          el.classList.add("block-tiny");
+        } else {
+          el.classList.add("block-compact");
+        }
+      }
+
+      const mainDurEl = el.querySelector(".block-times-left-main");
+      const startEl = el.querySelector(".block-times-left-start");
+      const endEl = el.querySelector(".block-times-left-end");
+      if (mainDurEl) mainDurEl.textContent = formatDurationLabel(block.durationMinutes);
+      if (startEl) startEl.textContent = formatTimeLabel(block.startMinutes);
+      if (endEl) endEl.textContent = formatTimeLabel(block.startMinutes + block.durationMinutes);
+
+
+      // re-apply typography scaling just for this block
+      adjustTypographyForBlock(block, el);
+    });
+
+    // After positions are updated, optionally adjust shadow classes so that
+    // "earlier" overlapping/touching blocks lose their shadow and don't
+    // cast onto blocks below.
+    if (skipShadow) {
+      return;
+    }
+    const sortedForShadow = schedule.blocks.slice().sort((a, b) => a.startMinutes - b.startMinutes);
+    // Clear any previous no-shadow flags
+    sortedForShadow.forEach(b => {
+      const el = timelineGridEl.querySelector(`.block[data-id="${b.id}"]`);
+      if (el) el.classList.remove("block-no-shadow");
+    });
+    let lastBlock = null;
+    sortedForShadow.forEach(b => {
+      if (!lastBlock) {
+        lastBlock = b;
+        return;
+      }
+      const lastEnd = lastBlock.startMinutes + lastBlock.durationMinutes;
+      // If the previous block overlaps OR directly touches this one in time,
+      // remove its shadow so it doesn't visually "sit" on top of this block.
+      if (lastEnd >= b.startMinutes) {
+        const lastEl = timelineGridEl.querySelector(`.block[data-id="${lastBlock.id}"]`);
+        if (lastEl) lastEl.classList.add("block-no-shadow");
+      }
+      lastBlock = b;
+    });
+  }
+
+  function enterEditTitle(block, titleEl, blockEl) {
+    blockEl.classList.add("editing");
+    titleEl.contentEditable = "true";
+    titleEl.focus();
+
+    // keep dir/alignment (and thus font) in sync with current text while typing
+    const syncDirection = () => {
+      const currentText = titleEl.textContent;
+      if (isRTL(currentText)) {
+        titleEl.dir = "rtl";
+        titleEl.style.textAlign = "right";
+      } else {
+        titleEl.dir = "ltr";
+        titleEl.style.textAlign = "left";
+      }
+    };
+    // run once immediately so an empty/new block is set up correctly
+    syncDirection();
+
+    const finish = () => {
+      pushUndoState();
+      block.title = titleEl.textContent.trim();
+      // final sync for saved title
+      syncDirection();
+      titleEl.contentEditable = "false";
+      blockEl.classList.remove("editing");
+      titleEl.removeEventListener("input", syncDirection);
+      saveAllSchedules();
+      renderBlocks();
+      updateFooterInfo(getSchedule(currentDate));
+    };
+
+    const keyHandler = (e) => {
+      if (e.key === "Backspace" && titleEl.textContent.trim() === "") {
+        e.preventDefault();
+        titleEl.removeEventListener("input", syncDirection);
+        deleteBlock(block.id);
+        return;
+      }
+      if (e.key === "Enter" || e.key === "Escape") {
+        e.preventDefault();
+        titleEl.blur();
+      }
+    };
+
+    titleEl.addEventListener("blur", () => {
+      titleEl.removeEventListener("keydown", keyHandler);
+      finish();
+    }, { once: true });
+
+    titleEl.addEventListener("keydown", keyHandler);
+    titleEl.addEventListener("input", syncDirection);
+  }
+
+  function blockTimeRangeLabel(block) {
+    return `${formatTimeLabel(block.startMinutes)} - ${formatTimeLabel(block.startMinutes + block.durationMinutes)}`;
+  }
+
+  function startDrag(mouseDownEvent, block, mode) {
+    mouseDownEvent.preventDefault();
+    pushUndoState();
+    const schedule = getSchedule(currentDate);
+    const rect = timelineGridEl.getBoundingClientRect();
+    const totalMinutes = schedule.activeEnd - schedule.activeStart;
+
+    dragState = {
+      block,
+      mode,
+      schedule,
+      startY: mouseDownEvent.clientY,
+      rectHeight: rect.height,
+      totalMinutes,
+      initialStartMinutes: block.startMinutes,
+      initialDuration: block.durationMinutes,
+      dragEl: timelineGridEl.querySelector(`.block[data-id="${block.id}"]`)
+    };
+    if (appEl) {
+      appEl.classList.add("drag-active");
+    }
+
+    if (dragState.dragEl) {
+      dragState.dragEl.classList.remove("block-no-shadow");
+      dragState.dragEl.classList.add("dragging");
+    }
+
+    document.addEventListener("mousemove", onDragMove);
+    document.addEventListener("mouseup", onDragEnd);
+  }
+
+  function onDragMove(e) {
+    if (!dragState) return;
+    e.preventDefault();
+    const {
+      block, mode, schedule,
+      startY, rectHeight, totalMinutes,
+      initialStartMinutes, initialDuration
+    } = dragState;
+
+    const deltaY = e.clientY - startY;
+    const minutesPerPixel = totalMinutes / rectHeight;
+    const deltaMinutes = deltaY * minutesPerPixel;
+
+    if (mode === "move") {
+      let newStart = initialStartMinutes + deltaMinutes;
+      newStart = Math.max(schedule.activeStart, newStart);
+      newStart = Math.min(schedule.activeEnd - block.durationMinutes, newStart);
+      // continuous movement while dragging; snap only on drop
+      block.startMinutes = Math.round(newStart);
+    } else if (mode === "resize-bottom") {
+      let newDuration = initialDuration + deltaMinutes;
+      const maxDuration = schedule.activeEnd - block.startMinutes;
+      newDuration = Math.min(maxDuration, newDuration);
+      newDuration = Math.max(SLOT_MINUTES, newDuration);
+      block.durationMinutes = Math.round(newDuration);
+    } else if (mode === "resize-top") {
+      const bottom = initialStartMinutes + initialDuration;
+      let newStart = initialStartMinutes + deltaMinutes;
+      // clamp new start so the block stays within the active day and keeps at least one slot
+      newStart = Math.max(schedule.activeStart, Math.min(newStart, bottom - SLOT_MINUTES));
+      const newDuration = bottom - newStart;
+      block.startMinutes = Math.round(newStart);
+      block.durationMinutes = Math.round(newDuration);
+    }
+
+    // don't reflow others while dragging; just update positions live
+    saveAllSchedules();
+    updateBlockPositions(schedule, true); // true = skip shadow recalculation while dragging
+    updateFooterInfo(schedule);
+
+    // --- preview where other blocks would move if we dropped now ---
+    const simBlocks = simulateReflowWithAnchor(schedule, block.id);
+    if (simBlocks && Array.isArray(simBlocks)) {
+      const simMap = new Map();
+      simBlocks.forEach(b => simMap.set(b.id, b));
+
+      const { rectHeight, totalMinutes } = dragState;
+      schedule.blocks.forEach(b => {
+        const el = timelineGridEl.querySelector(`.block[data-id="${b.id}"]`);
+        if (!el) return;
+
+        // Never override the dragged block's own transform; it already has .dragging
+        if (b.id === block.id) {
+          // clear any stray inline transform on the dragged block
+          el.style.transform = "";
+          return;
+        }
+
+        const sim = simMap.get(b.id);
+        if (!sim) {
+          el.style.transform = "";
+          return;
+        }
+
+        const deltaMinutes = sim.startMinutes - b.startMinutes;
+        if (Math.abs(deltaMinutes) < 0.5) {
+          // effectively no movement; reset transform
+          el.style.transform = "";
+          return;
+        }
+
+        const deltaRatio = deltaMinutes / totalMinutes;
+        const deltaPx = deltaRatio * rectHeight;
+        // Use a fraction of the full displacement for a subtle, elastic preview
+        const previewPx = deltaPx * 0.4;
+        el.style.transform = `translateY(${previewPx}px)`;
+      });
+    }
+  }
+
+  function resolveOverlaps(schedule) {
+    const blocks = schedule.blocks.slice().sort((a,b) => a.startMinutes - b.startMinutes);
+    for (let i = 1; i < blocks.length; i++) {
+      const prev = blocks[i-1];
+      const cur = blocks[i];
+      const prevEnd = prev.startMinutes + prev.durationMinutes;
+      if (cur.startMinutes < prevEnd) {
+        // push the later block just after the previous one, smoothly
+        cur.startMinutes = prevEnd;
+        if (cur.startMinutes + cur.durationMinutes > schedule.activeEnd) {
+          cur.durationMinutes = Math.max(SLOT_MINUTES, schedule.activeEnd - cur.startMinutes);
+        }
+      }
+    }
+    schedule.blocks = blocks;
+  }
+
+  function quantizeSchedule(schedule) {
+    schedule.blocks.forEach(block => {
+      block.startMinutes = snapToSlot(block.startMinutes);
+      block.durationMinutes = snapDuration(block.durationMinutes);
+    });
+  }
+
+  function onDragEnd() {
+    if (dragState) {
+      // Clear any preview transforms applied during drag
+      Array.from(timelineGridEl.querySelectorAll(".block")).forEach(el => {
+        el.style.transform = "";
+      });
+
+      const droppedEl = dragState.dragEl;
+      if (droppedEl) {
+        droppedEl.classList.remove("dragging");
+      }
+      // final tidy-up: snap to grid, then reflow with the dragged block as the anchor
+      quantizeSchedule(dragState.schedule);
+      reflowWithAnchor(dragState.schedule, dragState.block.id);
+      saveAllSchedules();
+      updateBlockPositions(dragState.schedule);
+      updateFooterInfo(dragState.schedule);
+      // apply a subtle drop bounce to the block that just settled
+      if (droppedEl) {
+        // ensure the bounce animation always retriggers on each drop
+        droppedEl.classList.remove("block-dropped");
+        // mark as "just dropped" so hover doesn't override the bounce
+        droppedEl.classList.add("block-just-dropped");
+        void droppedEl.offsetWidth; // force reflow
+        droppedEl.classList.add("block-dropped");
+
+        droppedEl.addEventListener("animationend", () => {
+          droppedEl.classList.remove("block-dropped");
+        }, { once: true });
+
+        // once the cursor leaves the block, allow hover again
+        droppedEl.addEventListener("mouseleave", () => {
+          droppedEl.classList.remove("block-just-dropped");
+        }, { once: true });
+      }
+    }
+    if (appEl) {
+      appEl.classList.remove("drag-active");
+    }
+    dragState = null;
+    document.removeEventListener("mousemove", onDragMove);
+    document.removeEventListener("mouseup", onDragEnd);
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>

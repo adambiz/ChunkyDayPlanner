@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>- Chunky Day Planner -</title>
+<title>Chunky Day Planner</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&display=swap" rel="stylesheet">
@@ -232,6 +232,7 @@
     border: 1px solid rgba(255,255,255,0.5);
     z-index: 1;
     box-shadow: 0 10px 24px rgba(15,23,42,0.22);
+    overflow: hidden;
   }
   .block:hover {
     transform: translateY(-1px) scale(1.005);
@@ -310,6 +311,7 @@
     justify-content: center; /* center the title block horizontally */
     padding-left: 0;         /* times are absolutely positioned, no need to pad */
     box-sizing: border-box;
+    z-index: 1;
   }
   .block-title,
   .block-times-left-main,
@@ -395,6 +397,136 @@
     line-height: 1.1;
   }
 
+  /* --- Completion overlay (chunky DONE + check) --- */
+  .complete-overlay {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+
+    /* chunky diagonal stripes */
+    background-image: repeating-linear-gradient(
+      45deg,
+      rgba(15,23,42,0.18) 0px,
+      rgba(15,23,42,0.18) 7px,
+      rgba(0,0,0,0) 7px,
+      rgba(0,0,0,0) 16px
+    );
+    box-shadow: none;
+
+    opacity: 0;
+    transform: translateZ(0);
+    clip-path: inset(0 100% 0 0);
+    will-change: clip-path, opacity;
+  }
+
+  /* Big check watermark */
+  .complete-overlay::after {
+    content: "✓";
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    bottom: auto;
+
+    /* default size (overridden for tiny/compact blocks below) */
+    font-size: 56px;
+    font-weight: 900;
+    line-height: 1;
+    color: currentColor;
+
+    opacity: 0;
+    transform: translateY(-50%) rotate(-8deg) scale(0.96);
+  }
+
+  /* Ensure the check never clips on short blocks */
+  .block-compact .complete-overlay::after {
+    font-size: 34px;
+    right: 14px;
+  }
+  .block-tiny .complete-overlay::after {
+    font-size: 22px;
+    right: 12px;
+  }
+
+
+  .block-completed .complete-overlay {
+    opacity: 0.9;
+    transform: translateZ(0);
+    clip-path: inset(0 0 0 0);
+  }
+
+  .block-completed .complete-overlay::after {
+    opacity: 0.26;
+    transform: translateY(-50%) rotate(-8deg) scale(1);
+  }
+
+  @keyframes complete-wipe-in {
+    from { clip-path: inset(0 100% 0 0); opacity: 0; }
+    to   { clip-path: inset(0 0 0 0);    opacity: 0.9; }
+  }
+
+  @keyframes complete-wipe-out {
+    from { clip-path: inset(0 0 0 0);    opacity: 0.9; }
+    to   { clip-path: inset(0 100% 0 0); opacity: 0; }
+  }
+
+  @keyframes check-pop {
+    0%   { transform: translateY(-50%) rotate(-8deg) scale(0.92); opacity: 0; }
+    60%  { transform: translateY(-50%) rotate(-8deg) scale(1.06); opacity: 0.26; }
+    100% { transform: translateY(-50%) rotate(-8deg) scale(1);    opacity: 0.26; }
+  }
+
+  .block-completed.complete-animate-in .complete-overlay {
+    animation: complete-wipe-in 180ms ease-out;
+  }
+
+  .block-completed.complete-animate-in .complete-overlay::after {
+    animation: check-pop 220ms ease-out;
+  }
+
+  .block-completed.complete-animate-out .complete-overlay {
+    animation: complete-wipe-out 160ms ease-in forwards;
+  }
+
+  /* completed: keep original color */
+  .block.block-completed {
+    /* gentler border + calmer shadow */
+    border: 1px solid rgba(255,255,255,0.34);
+    box-shadow: 0 8px 18px rgba(15,23,42,0.12);
+  }
+
+  /* make completed text a touch lighter without hurting readability */
+  .block.block-completed .block-inner {
+    opacity: 1;
+  }
+
+  /* keep completed hover calm and consistent (no scale) */
+  .block.block-completed:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 22px rgba(15,23,42,0.14);
+  }
+
+  /* Tiny bump / shake on toggle (applied to inner so it doesn't fight hover transforms) */
+  @keyframes toggle-bump {
+    0%   { transform: translateX(0) translateY(0) scale(1); }
+    30%  { transform: translateX(1px) translateY(1px) scale(0.995); }
+    60%  { transform: translateX(-1px) translateY(-1px) scale(1.01); }
+    100% { transform: translateX(0) translateY(0) scale(1); }
+  }
+
+  .block.toggle-bump .block-inner {
+    animation: toggle-bump 140ms ease-out;
+  }
+
+  /* Make the left time column feel clickable (but not while editing) */
+  .block-times-left {
+    cursor: pointer;
+  }
+  .block.editing .block-times-left {
+    cursor: default;
+  }
+  /* --- End completion overlay --- */
+
 
   .block-delete {
     position: absolute;
@@ -428,7 +560,7 @@
   border-radius: 999px;
   background: rgba(15,23,42,0.16);
   cursor: ns-resize;
-  display: flex;
+  display: none; /* hidden on desktop; kept for future mobile use */
   align-items: center;
   justify-content: center;
   box-shadow: 0 1px 2px rgba(15,23,42,0.18);
@@ -962,7 +1094,8 @@ function() {
       title: "",
       colorIndex: paletteIndex,
       startMinutes: start,
-      durationMinutes: Math.min(defaultDuration, activeEnd - start)
+      durationMinutes: Math.min(defaultDuration, activeEnd - start),
+      completed: false
     };
     pushUndoState();
     schedule.blocks.push(block);
@@ -992,6 +1125,64 @@ function() {
     saveAllSchedules();
     renderBlocks();
     updateFooterInfo(schedule);
+  }
+
+  function toggleBlockCompletedById(id) {
+    const schedule = getSchedule(currentDate);
+    const block = schedule.blocks.find(b => b.id === id);
+    if (!block) return;
+
+    const el = timelineGridEl.querySelector(`.block[data-id="${id}"]`);
+
+    pushUndoState();
+
+    const currentlyCompleted = !!block.completed;
+
+    // Toggle the data first (so it persists), but keep visuals for the wipe-out.
+    block.completed = !currentlyCompleted;
+    saveAllSchedules();
+
+    if (!el) return;
+
+    // Always add a tiny bump
+    el.classList.remove("toggle-bump");
+    void el.offsetWidth; // retrigger
+    el.classList.add("toggle-bump");
+    el.addEventListener("animationend", () => {
+      el.classList.remove("toggle-bump");
+    }, { once: true });
+
+    const overlay = el.querySelector(".complete-overlay");
+
+    if (!currentlyCompleted) {
+      // Becoming completed: show overlay + quick wipe-in
+      el.classList.add("block-completed");
+      el.classList.remove("complete-animate-out");
+      el.classList.add("complete-animate-in");
+      if (overlay) {
+        overlay.addEventListener("animationend", () => {
+          el.classList.remove("complete-animate-in");
+        }, { once: true });
+      } else {
+        el.classList.remove("complete-animate-in");
+      }
+    } else {
+      // Becoming un-completed: keep overlay visible while it wipes out
+      el.classList.add("block-completed");
+      el.classList.remove("complete-animate-in");
+      el.classList.add("complete-animate-out");
+
+      const finish = () => {
+        el.classList.remove("complete-animate-out");
+        el.classList.remove("block-completed");
+      };
+
+      if (overlay) {
+        overlay.addEventListener("animationend", finish, { once: true });
+      } else {
+        finish();
+      }
+    }
   }
 
 
@@ -1081,6 +1272,14 @@ function() {
       el.style.backgroundColor = colors.bg;
       el.style.color = colors.text;
 
+      if (block.completed) {
+        el.classList.add("block-completed");
+      }
+
+      const completeOverlay = document.createElement("div");
+      completeOverlay.className = "complete-overlay";
+      el.appendChild(completeOverlay);
+
       const topRatio = (block.startMinutes - activeStart) / totalMinutes;
       const heightRatio = block.durationMinutes / totalMinutes;
       el.style.top = `${topRatio * 100}%`;
@@ -1123,6 +1322,19 @@ function() {
       timesLeft.appendChild(range);
       // --- end new vertical range structure ---
 
+      // Click on the time column toggles completion (avoid starting a drag)
+      timesLeft.addEventListener("mousedown", (e) => {
+        if (e.button !== 0) return;
+        if (el.classList.contains("editing") || e.target.isContentEditable) return;
+        e.preventDefault();
+        e.stopPropagation();
+        toggleBlockCompletedById(block.id);
+      });
+      // Prevent dblclick on the time column from triggering title edit
+      timesLeft.addEventListener("dblclick", (e) => {
+        e.stopPropagation();
+      });
+
       const title = document.createElement("div");
       title.className = "block-title";
       title.textContent = block.title;
@@ -1156,14 +1368,36 @@ function() {
       el.appendChild(resizeBottom);
       timelineGridEl.appendChild(el);
 
-      // drag from anywhere except resize/delete
+      // drag or resize from the block body (top/bottom edge = resize)
       el.addEventListener("mousedown", (e) => {
         if (e.button !== 0) return;
         // Don't start drag when editing text or clicking inside the editable title
         if (el.classList.contains("editing") || e.target.isContentEditable) return;
-        if (e.target === resizeBottom || e.target === resizeTop || e.target === delBtn) return;
-        if (e.detail > 1) return; // dblclick goes to edit
-        startDrag(e, block, "move");
+        if (e.target === delBtn) return;
+
+        // Shift+click toggles completion
+        if (e.shiftKey) {
+          e.preventDefault();
+          e.stopPropagation();
+          toggleBlockCompletedById(block.id);
+          return;
+        }
+
+        const rect = el.getBoundingClientRect();
+        const y = e.clientY - rect.top;
+        const RESIZE_ZONE = 12; // px from top/bottom edge
+
+        let mode = "move";
+        if (y <= RESIZE_ZONE) {
+          mode = "resize-top";
+        } else if (rect.height - y <= RESIZE_ZONE) {
+          mode = "resize-bottom";
+        }
+
+        // Let double-click still open the editor when not resizing
+        if (e.detail > 1 && mode === "move") return; // dblclick goes to edit
+
+        startDrag(e, block, mode);
       });
 
       // double-click to edit title
@@ -1178,23 +1412,27 @@ function() {
         hoveredBlockId = block.id;
       });
       el.addEventListener("mouseleave", () => {
+        if (!dragState) {
+          el.style.cursor = "grab";
+        }
         if (hoveredBlockId === block.id) {
           hoveredBlockId = null;
         }
       });
 
-      // resize bottom
-      resizeBottom.addEventListener("mousedown", (e) => {
-        if (e.button !== 0) return;
-        e.stopPropagation();
-        startDrag(e, block, "resize-bottom");
+      // change cursor near top/bottom edges to indicate resize zones
+      el.addEventListener("mousemove", (e) => {
+        if (dragState) return;
+        const rect = el.getBoundingClientRect();
+        const y = e.clientY - rect.top;
+        const RESIZE_ZONE = 12;
+        if (y <= RESIZE_ZONE || rect.height - y <= RESIZE_ZONE) {
+          el.style.cursor = "ns-resize";
+        } else {
+          el.style.cursor = "grab";
+        }
       });
-      // resize top
-      resizeTop.addEventListener("mousedown", (e) => {
-        if (e.button !== 0) return;
-        e.stopPropagation();
-        startDrag(e, block, "resize-top");
-      });
+
 
       // apply typography scaling for this block only
       adjustTypographyForBlock(block, el);

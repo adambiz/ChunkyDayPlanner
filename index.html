@@ -605,7 +605,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 0 4px;
-    text-transform: uppercase;
+    text-transform: none;
     letter-spacing: 0.12em;
     font-weight: 500;
     opacity: 0.85;
@@ -648,7 +648,7 @@
   </div>
 
   <div class="footer">
-    <span>Each day is saved automatically.</span>
+    <span id="hoverInfo">—</span>
     <span id="footerInfo"></span>
   </div>
 </div>
@@ -762,6 +762,7 @@ function() {
   const summaryInfoEl = document.getElementById("summaryInfo");
   const footerInfoEl = document.getElementById("footerInfo");
   const appEl = document.querySelector(".app");
+  const hoverInfoEl = document.getElementById("hoverInfo");
 
   document.addEventListener("keydown", (e) => {
     const target = e.target;
@@ -962,6 +963,78 @@ function() {
     if (e.target.closest(".block")) return;
     createBlockAtPosition(e.clientY);
   });
+
+  // --- Footer hover info: show duration of the block OR the free gap under the cursor ---
+  function minutesFromClientY(clientY, schedule) {
+    const { activeStart, activeEnd } = schedule;
+    const totalMinutes = activeEnd - activeStart;
+    const rect = timelineGridEl.getBoundingClientRect();
+    const y = clientY - rect.top;
+    const ratio = Math.min(Math.max(y / rect.height, 0), 1);
+    return activeStart + ratio * totalMinutes;
+  }
+
+  function durationUnderCursor(mins, schedule) {
+    const blocks = schedule.blocks
+      .slice()
+      .sort((a, b) => a.startMinutes - b.startMinutes);
+
+    let prev = null;
+    let next = null;
+
+    for (const b of blocks) {
+      if (mins < b.startMinutes) {
+        next = b;
+        break;
+      }
+      prev = b;
+    }
+
+    // Inside a block
+    if (prev) {
+      const prevEnd = prev.startMinutes + prev.durationMinutes;
+      if (mins >= prev.startMinutes && mins <= prevEnd) {
+        return Math.max(0, Math.round(prev.durationMinutes));
+      }
+    }
+
+    // In a free gap
+    const gapStart = prev ? (prev.startMinutes + prev.durationMinutes) : schedule.activeStart;
+    const gapEnd = next ? next.startMinutes : schedule.activeEnd;
+    return Math.max(0, Math.round(gapEnd - gapStart));
+  }
+
+  function setHoverInfoText(text) {
+    if (!hoverInfoEl) return;
+    hoverInfoEl.textContent = text;
+  }
+
+  timelineContainerEl.addEventListener("mousemove", (e) => {
+    const schedule = getSchedule(currentDate);
+    if (!schedule) return;
+
+    // If we're not really over the grid (rare), keep a neutral placeholder.
+    if (!timelineGridEl) {
+      setHoverInfoText("—");
+      return;
+    }
+
+    const mins = minutesFromClientY(e.clientY, schedule);
+    const dur = durationUnderCursor(mins, schedule);
+
+    // If there is literally no gap (blocks touching), avoid showing 0m.
+    if (!dur) {
+      setHoverInfoText("—");
+      return;
+    }
+
+    setHoverInfoText(formatDurationLabel(dur));
+  });
+
+  timelineContainerEl.addEventListener("mouseleave", () => {
+    setHoverInfoText("—");
+  });
+  // --- End footer hover info ---
 
   function stripTime(date) {
     const d = new Date(date);
@@ -1207,6 +1280,8 @@ function() {
     summaryInfoEl.textContent = `· ${hours}h`;
 
     updateFooterInfo(schedule);
+    // Reset hover display when switching days / rerendering
+    if (hoverInfoEl) hoverInfoEl.textContent = "—";
 
     renderTimeline();
     renderBlocks();
@@ -1394,6 +1469,11 @@ function() {
           mode = "resize-bottom";
         }
 
+        // Holding Cmd/Ctrl forces move (useful for tiny 15m blocks)
+        if (e.metaKey || e.ctrlKey) {
+          mode = "move";
+        }
+
         // Let double-click still open the editor when not resizing
         if (e.detail > 1 && mode === "move") return; // dblclick goes to edit
 
@@ -1423,6 +1503,11 @@ function() {
       // change cursor near top/bottom edges to indicate resize zones
       el.addEventListener("mousemove", (e) => {
         if (dragState) return;
+        // If Cmd/Ctrl is held, always show grab (since we force move on mousedown)
+        if (e.metaKey || e.ctrlKey) {
+          el.style.cursor = "grab";
+          return;
+        }
         const rect = el.getBoundingClientRect();
         const y = e.clientY - rect.top;
         const RESIZE_ZONE = 12;

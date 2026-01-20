@@ -212,6 +212,8 @@
     height: 2px;
     background: #ef4444;
     pointer-events: none;
+    z-index: 3;
+    transition: top 1s linear;
   }
 
   .block {
@@ -601,14 +603,89 @@
   .footer {
     font-size: 11px;
     color: #64748b;
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
     padding: 0 4px;
     text-transform: none;
     letter-spacing: 0.12em;
     font-weight: 500;
     opacity: 0.85;
+    column-gap: 10px;
+  }
+  #hoverInfo {
+    justify-self: start;
+    min-width: 54px;
+    text-align: left;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  #footerInfo {
+    justify-self: end;
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .shortcuts-btn {
+    border: none;
+    background: transparent;
+    padding: 0;
+    font-size: 11px;
+    cursor: pointer;
+    color: inherit;
+    opacity: 0.85;
+    letter-spacing: 0.12em;
+    text-transform: none;
+  }
+  .shortcuts-btn:active {
+    transform: translateY(1px);
+  }
+
+  .shortcuts-modal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(2, 6, 23, 0.35);
+    z-index: 999;
+  }
+  .shortcuts-modal.open {
+    display: flex;
+  }
+  .shortcuts-panel {
+    width: min(360px, calc(100% - 32px));
+    background: #F3FCF8;
+    border-radius: 16px;
+    box-shadow: 0 18px 40px rgba(15,23,42,0.35);
+    padding: 14px 16px;
+    color: #022c22;
+  }
+  .shortcuts-title {
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .shortcuts-list {
+    margin: 0;
+    padding-left: 18px;
+    font-size: 12px;
+    line-height: 1.35;
+    color: #0f172a;
+    opacity: 0.85;
+  }
+  .shortcuts-list li {
+    margin: 6px 0;
+  }
+  .shortcuts-footnote {
+    margin-top: 10px;
+    font-size: 11px;
+    color: #64748b;
+    letter-spacing: 0.08em;
+    opacity: 0.9;
   }
 </style>
 </head>
@@ -649,7 +726,23 @@
 
   <div class="footer">
     <span id="hoverInfo">—</span>
+    <button class="shortcuts-btn" id="shortcutsBtn" type="button">shortcuts</button>
     <span id="footerInfo"></span>
+  </div>
+</div>
+
+<div class="shortcuts-modal" id="shortcutsModal" aria-hidden="true">
+  <div class="shortcuts-panel">
+    <div class="shortcuts-title">Shortcuts</div>
+    <ul class="shortcuts-list">
+      <li><strong>Double-Click</strong> - new block</li>
+      <li><strong>Cmd  Click</strong> - toggle done</li>
+      <li><strong>Cmd  C</strong> - copy hovered block</li>
+      <li><strong>Cmd  V</strong> - paste copied block</li>
+      <li><strong>Backspace</strong> - delete hovered block</li>
+      <li><strong>Cmd  Z</strong> - undo</li>
+    </ul>
+    <div class="shortcuts-footnote">Click anywhere to close</div>
   </div>
 </div>
 
@@ -673,6 +766,9 @@ function() {
   let schedules = loadAllSchedules();
   let dragState = null;
   let hoveredBlockId = null;
+
+  // Now-line ticker (keeps the current-time indicator updating without reload)
+  let nowLineTimer = null;
 
   // Undo / copy-paste state
   let undoStack = [];
@@ -739,6 +835,7 @@ function() {
 
     const block = {
       id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
+      createdAt: Date.now(),
       title: copiedBlockTemplate.title,
       colorIndex: copiedBlockTemplate.colorIndex,
       startMinutes: start,
@@ -763,6 +860,39 @@ function() {
   const footerInfoEl = document.getElementById("footerInfo");
   const appEl = document.querySelector(".app");
   const hoverInfoEl = document.getElementById("hoverInfo");
+
+  const shortcutsBtnEl = document.getElementById("shortcutsBtn");
+  const shortcutsModalEl = document.getElementById("shortcutsModal");
+
+  function openShortcuts() {
+    if (!shortcutsModalEl) return;
+    shortcutsModalEl.classList.add("open");
+    shortcutsModalEl.setAttribute("aria-hidden", "false");
+  }
+
+  function closeShortcuts() {
+    if (!shortcutsModalEl) return;
+    shortcutsModalEl.classList.remove("open");
+    shortcutsModalEl.setAttribute("aria-hidden", "true");
+  }
+
+  if (shortcutsBtnEl) {
+    shortcutsBtnEl.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openShortcuts();
+    });
+  }
+
+  if (shortcutsModalEl) {
+    shortcutsModalEl.addEventListener("click", () => {
+      closeShortcuts();
+    });
+  }
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeShortcuts();
+  });
 
   document.addEventListener("keydown", (e) => {
     const target = e.target;
@@ -1148,31 +1278,73 @@ function() {
 
   function createBlockAtPosition(clientY) {
     const schedule = getSchedule(currentDate);
-    const {activeStart, activeEnd} = schedule;
+    const { activeStart, activeEnd } = schedule;
     const totalMinutes = activeEnd - activeStart;
     const rect = timelineGridEl.getBoundingClientRect();
     const y = clientY - rect.top;
     const ratio = Math.min(Math.max(y / rect.height, 0), 1);
+
     let minutes = activeStart + ratio * totalMinutes;
     let start = snapToSlot(minutes);
-    const defaultDuration = 60;
 
-    if (start + defaultDuration > activeEnd) {
-      start = Math.max(activeStart, activeEnd - defaultDuration);
+    // Ensure there is always room for at least one slot.
+    if (start > activeEnd - SLOT_MINUTES) {
+      start = activeEnd - SLOT_MINUTES;
+    }
+    if (start < activeStart) {
+      start = activeStart;
+    }
+
+    // Find the next block (by start time) that begins at/after our proposed start.
+    const sorted = schedule.blocks.slice().sort((a, b) => a.startMinutes - b.startMinutes);
+    const next = sorted.find(b => b.startMinutes >= start);
+    const gapToNext = next ? (next.startMinutes - start) : (activeEnd - start);
+
+    // Default is 60 minutes.
+    // If we are within 15 minutes (or less) before the next block, we INSERT a 15m block
+    // at the next block's start time and push the next block down by 15m.
+    // Otherwise, we shrink to fit the available gap (15/30/45/60) without pushing.
+    let duration = 60;
+
+    if (next && gapToNext <= SLOT_MINUTES) {
+      start = next.startMinutes;
+      duration = SLOT_MINUTES;
+    } else {
+      if (gapToNext >= 60) duration = 60;
+      else if (gapToNext >= 45) duration = 45;
+      else if (gapToNext >= 30) duration = 30;
+      else if (gapToNext >= 15) duration = 15;
+      else duration = 60;
+    }
+
+    // Never exceed the active day end.
+    duration = Math.min(duration, activeEnd - start);
+
+    // If we somehow end up with less than one slot (e.g., near day end), shift up to fit.
+    if (duration < SLOT_MINUTES) {
+      start = Math.max(activeStart, activeEnd - SLOT_MINUTES);
+      duration = Math.min(60, activeEnd - start);
+      duration = Math.max(SLOT_MINUTES, duration);
     }
 
     const paletteIndex = schedule.blocks.length % palette.length;
     const block = {
       id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
+      createdAt: Date.now(),
       title: "",
       colorIndex: paletteIndex,
       startMinutes: start,
-      durationMinutes: Math.min(defaultDuration, activeEnd - start),
+      durationMinutes: duration,
       completed: false
     };
+
     pushUndoState();
     schedule.blocks.push(block);
+
+    // This will only push other blocks if there is actual overlap,
+    // which now only happens when gapToNext < 15 minutes or for insert+push.
     resolveOverlaps(schedule);
+
     saveAllSchedules();
     renderBlocks();
     updateFooterInfo(schedule);
@@ -1287,6 +1459,57 @@ function() {
     renderBlocks();
   }
 
+  function updateNowLine() {
+    const schedule = getSchedule(currentDate);
+    if (!schedule) return;
+
+    const { activeStart, activeEnd } = schedule;
+    const totalMinutes = activeEnd - activeStart;
+
+    const today = stripTime(new Date());
+    const isToday = formatDateKey(today) === formatDateKey(currentDate);
+
+    const existing = timelineGridEl.querySelector(".now-line");
+
+    // Only show the line for "today".
+    if (!isToday) {
+      if (existing) existing.remove();
+      return;
+    }
+
+    const now = new Date();
+    const minsNow = now.getHours() * 60 + now.getMinutes() + (now.getSeconds() / 60);
+
+    // Hide if current time is outside the active range.
+    if (minsNow < activeStart || minsNow > activeEnd) {
+      if (existing) existing.remove();
+      return;
+    }
+
+    const ratioNow = (minsNow - activeStart) / totalMinutes;
+    const topNow = ratioNow * 100;
+
+    const line = existing || document.createElement("div");
+    if (!existing) {
+      line.className = "now-line";
+      timelineGridEl.appendChild(line);
+    }
+    line.style.top = `${topNow}%`;
+  }
+
+  function startNowLineTicker() {
+    if (nowLineTimer) return;
+
+    // Update immediately, then keep it fresh.
+    updateNowLine();
+    nowLineTimer = setInterval(updateNowLine, 1000);
+
+    // If the tab becomes visible again, snap the line to the current time.
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) updateNowLine();
+    });
+  }
+
   function renderTimeline() {
     const schedule = getSchedule(currentDate);
     const {activeStart, activeEnd} = schedule;
@@ -1315,21 +1538,8 @@ function() {
       timelineGridEl.appendChild(label);
     }
 
-    // now-line
-    const today = stripTime(new Date());
-    const isToday = formatDateKey(today) === formatDateKey(currentDate);
-    if (isToday) {
-      const now = new Date();
-      const minsNow = now.getHours()*60 + now.getMinutes();
-      if (minsNow >= activeStart && minsNow <= activeEnd) {
-        const ratioNow = (minsNow - activeStart) / totalMinutes;
-        const topNow = ratioNow * 100;
-        const nowLine = document.createElement("div");
-        nowLine.className = "now-line";
-        nowLine.style.top = `${topNow}%`;
-        timelineGridEl.appendChild(nowLine);
-      }
-    }
+    // now-line (updated by ticker)
+    updateNowLine();
   }
 
   function renderBlocks() {
@@ -1450,11 +1660,43 @@ function() {
         if (el.classList.contains("editing") || e.target.isContentEditable) return;
         if (e.target === delBtn) return;
 
-        // Shift+click toggles completion
-        if (e.shiftKey) {
+        // Cmd/Ctrl gesture:
+        // - Cmd/Ctrl + click (no drag) => toggle completion
+        // - Cmd/Ctrl + drag => move block
+        if (e.metaKey || e.ctrlKey) {
           e.preventDefault();
           e.stopPropagation();
-          toggleBlockCompletedById(block.id);
+
+          const startX = e.clientX;
+          const startY = e.clientY;
+          let didDrag = false;
+          const DRAG_THRESHOLD_PX = 4;
+
+          const onMetaMove = (mv) => {
+            const dx = mv.clientX - startX;
+            const dy = mv.clientY - startY;
+            if (!didDrag && Math.hypot(dx, dy) >= DRAG_THRESHOLD_PX) {
+              didDrag = true;
+              cleanupMetaGesture();
+              // Always treat Cmd/Ctrl + drag as MOVE (ignore resize zones)
+              startDrag(e, block, "move");
+            }
+          };
+
+          const onMetaUp = () => {
+            cleanupMetaGesture();
+            if (!didDrag) {
+              toggleBlockCompletedById(block.id);
+            }
+          };
+
+          const cleanupMetaGesture = () => {
+            document.removeEventListener("mousemove", onMetaMove);
+            document.removeEventListener("mouseup", onMetaUp);
+          };
+
+          document.addEventListener("mousemove", onMetaMove);
+          document.addEventListener("mouseup", onMetaUp);
           return;
         }
 
@@ -1469,8 +1711,8 @@ function() {
           mode = "resize-bottom";
         }
 
-        // Holding Cmd/Ctrl forces move (useful for tiny 15m blocks)
-        if (e.metaKey || e.ctrlKey) {
+        // Holding Alt forces move (useful for tiny 15m blocks)
+        if (e.altKey) {
           mode = "move";
         }
 
@@ -1503,8 +1745,8 @@ function() {
       // change cursor near top/bottom edges to indicate resize zones
       el.addEventListener("mousemove", (e) => {
         if (dragState) return;
-        // If Cmd/Ctrl is held, always show grab (since we force move on mousedown)
-        if (e.metaKey || e.ctrlKey) {
+        // If Alt is held, always show grab (since we force move on mousedown)
+        if (e.altKey) {
           el.style.cursor = "grab";
           return;
         }
@@ -1762,7 +2004,12 @@ function() {
   }
 
   function resolveOverlaps(schedule) {
-    const blocks = schedule.blocks.slice().sort((a,b) => a.startMinutes - b.startMinutes);
+    const blocks = schedule.blocks.slice().sort((a, b) => {
+      const d = a.startMinutes - b.startMinutes;
+      if (d !== 0) return d;
+      // For equal start times: newer blocks first, so they push older ones down.
+      return (b.createdAt || 0) - (a.createdAt || 0);
+    });
     for (let i = 1; i < blocks.length; i++) {
       const prev = blocks[i-1];
       const cur = blocks[i];
@@ -1829,6 +2076,7 @@ function() {
     document.removeEventListener("mouseup", onDragEnd);
   }
 
+  startNowLineTicker();
   render();
 })();
 </script>

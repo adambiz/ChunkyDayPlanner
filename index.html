@@ -222,15 +222,25 @@
     right: 10px;
     border-radius: 22px;
     padding: 4px 16px 8px;
-    min-height: 22px;
+    /* IMPORTANT:
+       Do NOT enforce a fixed min-height here.
+       15-minute blocks can be shorter than 22px depending on the active-day range,
+       and a CSS min-height causes them to visually overlap neighboring blocks.
+       We rely on the JS percent-based sizing + SLOT_MINUTES minimum instead.
+    */
+    min-height: 0;
+
+    /* No external margins on absolutely-positioned blocks (margins can visually overlap).
+       Hairline separation is handled by borders/shadows instead.
+    */
+    margin-top: 0;
+    margin-bottom: 0;
     box-sizing: border-box;
     cursor: grab;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: top 0.22s ease-in-out, height 0.22s ease-in-out, transform 0.18s ease-out, box-shadow 0.18s ease-out;
-    margin-top: 1px;           /* hairline gaps between blocks */
-    margin-bottom: 1px;
     border: 1px solid rgba(255,255,255,0.5);
     z-index: 1;
     box-shadow: 0 10px 24px rgba(15,23,42,0.22);
